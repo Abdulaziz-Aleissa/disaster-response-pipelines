@@ -1,76 +1,164 @@
 <!doctype html>
 <html lang="en">
 <head>
+    <!-- Meta Tags & Title -->
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Disaster Response Project{% endblock %}</title>
 
-    <title>Disasters</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="https://d14fo0winaifog.cloudfront.net/plotly-basic.js"></script>
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #1f4037, #000000);
+            color: #fff;
+        }
+        .home-icon {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 2rem;
+            color: #fff;
+            z-index: 1000;
+            text-decoration: none;
+        }
+        .home-icon:hover {
+            color: #00ff7f;
+        }
+        .jumbotron {
+            background-color: transparent;
+            padding-top: 150px;
+            text-align: center;
+            padding-bottom: 100px;
+        }
+        .jumbotron h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .jumbotron p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+        }
+        .form-control {
+            border-radius: 50px;
+            padding: 25px;
+            font-size: 1.2rem;
+        }
+        .btn-success {
+            border-radius: 50px;
+            padding: 25px;
+            font-size: 1.2rem;
+        }
+        .alert {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+        }
+        .container h2 {
+            margin-top: 50px;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        .card {
+            background: rgba(0, 128, 128, 0.33);
+            border: none;
+            color: #fff;
+        }
+        .card-body.bg-success {
+            background-color: rgba(76, 175, 80, 0.7);
+        }
+        .card-body.bg-secondary {
+            background-color: rgba(108, 117, 125, 0.7);
+        }
+        footer {
+            margin-top: 50px;
+            padding: 20px 0;
+            background-color: transparent;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .plotly-chart {
+            margin-bottom: 50px;
+        }
+    </style>
 </head>
-
 <body>
 
-<nav class="navbar navbar-inverse navbar-fixed-top">
-    <div class="container">
-        <div class="navbar-header">
-            <a class="navbar-brand" href="/">Disaster Response Project</a>
-        </div>
-        <div id="navbar" class="collapse navbar-collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="https://www.udacity.com/">Made with Udacity</a></li>
-                <li><a href="https://github.com/">Contact</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
+    <!-- Home Icon -->
+    <a href="/" class="home-icon"><i class="bi bi-house"></i></a>
 
+    <!-- Header and Input Section -->
+    <header class="jumbotron">
+        <div class="container">
+            <h1 class="display-4">Emergency Eye</h1>
+            <p class="lead">Visualizing communications to enhance crisis response
 
-<div class="jumbotron">
-    <div class="container">
-        <h1 class="text-center">Disaster Response Project</h1>
-        <p class="text-center">Analyzing message data for disaster response</p>
-        <hr />
-      
-        <div class="row">
-            <div class="col-lg-12 form-group-lg">
-                <form action="/go" method="get">
+            </p>
+
+            <!-- Message Input Form -->
+            <form action="/go" method="get" class="row g-2 justify-content-center">
+                <div class="col-md-8">
                     <input type="text" class="form-control form-control-lg" name="query" placeholder="Enter a message to classify">
-                    <div class="col-lg-offset-5">
-                        <button type="submit" class="btn btn-lg btn-success">Classify Message</button>
-                    </div>
-                </form>
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-lg btn-success">Classify Message</button>
+                </div>
+            </form>
+
+            {% block message %}
+            {% endblock %}
+        </div>
+    </header>
+
+    <!-- Visualization Section -->
+    <main class="container">
+        {% block content %}
+            <div class="text-center mb-5">
+                <h2>Overview of Training Dataset</h2>
             </div>
-        </div>
 
-        {% block message %}
+            <!-- Graphs Inside Cards -->
+            <div class="row">
+                {% for id in ids %}
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div id="{{ id }}" class="plotly-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         {% endblock %}
-    </div>
-</div>
+    </main>
 
-<div class="container">
-    {% block content %}
-        <div class="page-header">
-            <h1 class="text-center">Overview of Training Dataset</h1>
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <small>&copy; 2023 Disaster Response Project</small>
         </div>
-    {% endblock %}
+    </footer>
 
-    {% for id in ids %}
-        <div id="{{id}}"></div>
-    {% endfor %}
-</div>
+    <!-- JavaScript and Plotly -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        const graphs = {{ graphJSON | safe }};
+        const ids = {{ ids | safe }};
 
-<script type="text/javascript">
-    const graphs = {{graphJSON | safe}};
-    const ids = {{ids | safe}};
-    for(let i in graphs) {
-        Plotly.plot(ids[i], graphs[i].data, graphs[i].layout);
-    }
-</script>
-
+        for (let i in graphs) {
+            Plotly.newPlot(ids[i], graphs[i].data, graphs[i].layout, {responsive: true});
+        }
+    </script>
 </body>
 </html>

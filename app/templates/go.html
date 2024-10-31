@@ -1,21 +1,31 @@
 {% extends "master.html" %}
-{% block title %}Results{% endblock %}
+{% block title %}Classification Results{% endblock %}
 
 {% block message %}
-    <hr />
-    <h4 class="text-center">MESSAGE</h4>
-    <p class="text-center"><i>{{ query }}</i></p>
+    <div class="alert alert-info text-center mt-4">
+        <strong>Message:</strong> <em>{{ query }}</em>
+    </div>
 {% endblock %}
 
 {% block content %}
-    <h1 class="text-center">Result</h1>
-    <ul class="list-group">
-        {% for category, classification in classification_result.items() %}
-            {% if classification == 1 %}
-                <li class="list-group-item list-group-item-success text-center">{{ category.replace('_', ' ').title() }}</li>
-            {% else %}
-                <li class="list-group-item list-group-item-dark text-center">{{ category.replace('_', ' ').title() }}</li>
-            {% endif %}
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <h2 class="text-center mb-4">Classification Results</h2>
+        <div class="row">
+            {% for category, classification in classification_result.items() %}
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center">
+                        {% if classification == 1 %}
+                            <div class="card-body bg-success">
+                                <h5 class="card-title">{{ category.replace('_', ' ').title() }}</h5>
+                            </div>
+                        {% else %}
+                            <div class="card-body bg-secondary">
+                                <h5 class="card-title">{{ category.replace('_', ' ').title() }}</h5>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
 {% endblock %}
