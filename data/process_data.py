@@ -42,15 +42,16 @@ def clean_data(df):
     3. Renames each new column with the extracted prefix from the original 'categories' entries.
     4. Extracts the last character from each entry in the split columns (assumed to be an integer) 
        and converts it to an integer type.
-    5. Drops the original 'categories' column.
-    6. Concatenates the new category columns back into the original DataFrame.
-    7. Removes duplicate rows.
+    5. Drops rows with a value of '2' in any of the category columns, as they do not fit binary classification.
+    6. Drops the original 'categories' column.
+    7. Concatenates the new category columns back into the original DataFrame.
+    8. Removes duplicate rows.
 
     Parameters:
-    df : The DataFrame containing the 'categories' column to process.
+    df (pandas.DataFrame): The DataFrame containing the 'categories' column to process.
 
     Returns:
-    pandas.DataFrame: The transformed DataFrame with new category columns and duplicates removed.
+    pandas.DataFrame: The transformed DataFrame with new category columns, duplicates removed, and only binary values.
     """
     # Step 1: Split 'categories' into separate category columns
     categories = df['categories'].str.split(';', expand=True)
@@ -60,9 +61,12 @@ def clean_data(df):
     category_colnames = first_row.apply(lambda x: x.split('-')[0])
     categories.columns = category_colnames
 
-    # Step 3: Convert category values to just numbers 0 or 1
+    # Step 3: Convert category values to integers and drop rows with value '2'
     for column in categories:
+        # Convert values to integers after extracting the last character
         categories[column] = categories[column].str[-1].astype(int)
+        # Drop rows where the value is '2' in this column
+        categories = categories[categories[column] != 2]
 
     # Step 4: Drop the original 'categories' column from `df`
     df = df.drop('categories', axis=1)
@@ -74,6 +78,7 @@ def clean_data(df):
     df = df.drop_duplicates()
 
     return df
+
 
 
 
