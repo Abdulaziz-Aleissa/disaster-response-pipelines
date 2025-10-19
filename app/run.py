@@ -95,19 +95,16 @@ def index():
 # Webpage to handle user query and display model results
 @app.route('/go')
 def go():
-    # Save user input
     query = request.args.get('query', '')
+    labels = model.predict([query])[0]
+    cats = list(df.columns[4:])
+    results = dict(zip(cats, labels))
 
-    # Predict classification for query
-    classification_labels = model.predict([query])[0]
-    classification_results = dict(zip(df.columns[4:], classification_labels))
+    # sort so positives first, then alphabetically
+    results = dict(sorted(results.items(), key=lambda kv: (-kv[1], kv[0])))
 
-    # Render results page with query and classification results
-    return render_template(
-        'go.html',
-        query=query,
-        classification_result=classification_results
-    )
+    return render_template('go.html', query=query, classification_result=results)
+
 
 def main():
     app.run(host='0.0.0.0', port=3001, debug=True)

@@ -8,12 +8,19 @@ from sklearn.model_selection import GridSearchCV
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.stem import WordNetLemmatizer
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import LinearSVC
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+from sklearn.metrics import classification_report, f1_score, precision_score, recall_score
+
+
 import pickle
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -56,54 +63,55 @@ def load_data(database_filepath):
 
 # Tokenize function
 def tokenize(text):
-    text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
+    # normalize urls, numbers, and punctuation
+    text = re.sub(r"http\S+|www\.\S+", " url ", text.lower())
+    text = re.sub(r"\d+", " num ", text)
+    text = re.sub(r"[^a-z0-9]+", " ", text)
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stopwords.words("english")]
-    return tokens
+    return [lemmatizer.lemmatize(t) for t in tokens if t not in stopwords.words("english")]
 
 # Build model function
-def build_model():
+def build_model(fast=True):
     """
-    Builds a machine learning pipeline for multi-output text classification,
-    incorporating StartingVerbExtractor and GridSearchCV for hyperparameter tuning.
+    fast=True  -> LinearSVC (very fast, no probabilities)
+    fast=False -> LogisticRegression (still fast, gives predict_proba)
     """
-    # Defining the initial pipeline
+    vectorizer = TfidfVectorizer(
+        tokenizer=tokenize,
+        ngram_range=(1, 2),
+        min_df=2,
+        max_features=100_000,
+        sublinear_tf=True
+    )
+
+    if fast:
+        base_clf = LinearSVC(class_weight="balanced")
+    else:
+        base_clf = LogisticRegression(
+            solver="liblinear",  # or "saga" if you prefer
+            max_iter=2000,
+            class_weight="balanced"
+        )
+
     pipeline = Pipeline([
-        ('features', FeatureUnion([
-            ('text_pipeline', Pipeline([
-                ('vect', CountVectorizer()),
-                ('tfidf', TfidfTransformer())
-            ])),
-            ('starting_verb', StartingVerbExtractor())
-        ])),
-        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+        ("tfidf", vectorizer),
+        ("clf", OneVsRestClassifier(base_clf, n_jobs=-1))
     ])
-
-    # Defining parameter grid for GridSearch
-    param_grid = {
-        'clf__estimator__n_estimators': [100, 200, 300],
-        'clf__estimator__max_depth': [None, 5, 10],
-        'clf__estimator__min_samples_split': [2, 5, 10]
-    }
-
-    # Instantiating GridSearchCV with the pipeline and parameter grid
-    grid_search = GridSearchCV(pipeline, param_grid, cv=5, verbose=2, n_jobs=-1)
-
-    return grid_search
+    return pipeline
 
 # Evaluate model function
 def evaluate_model(model, X_test, Y_test, category_names):
-    """
-    Evaluates the model's performance on the test set by printing the classification report for each category.
-    """
     Y_pred = model.predict(X_test)
-    Y_pred_df = pd.DataFrame(Y_pred, columns=category_names)
-    
-    for column in category_names:
-        print(f"Category: {column}")
-        print(classification_report(Y_test[column], Y_pred_df[column]))
-        print("\n" + "="*60 + "\n")
+    # Per-label report
+    for i, col in enumerate(category_names):
+        print(f"Category: {col}")
+        print(classification_report(Y_test[col], Y_pred[:, i], zero_division=0))
+        print("="*60)
+    # Global scores
+    micro_f1 = f1_score(Y_test.values, Y_pred, average="micro", zero_division=0)
+    macro_f1 = f1_score(Y_test.values, Y_pred, average="macro", zero_division=0)
+    print(f"Micro F1: {micro_f1:.3f} | Macro F1: {macro_f1:.3f}")
 
 # Save model function
 def save_model(model, model_filepath):

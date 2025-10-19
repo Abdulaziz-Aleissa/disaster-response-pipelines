@@ -31,53 +31,39 @@ def load_data(datasetOne, datasetTwo):
 
 
 def clean_data(df):
-    """
-    Processes the 'categories' column in the DataFrame by splitting, renaming, 
-    extracting integer values, and merging back into the DataFrame.
-
-    This function performs the following transformations:
-    1. Splits the 'categories' column in `df` by the semicolon (';') delimiter,
-       expanding the results into multiple new columns.
-    2. Extracts the prefix from each split entry in the first row to serve as column names.
-    3. Renames each new column with the extracted prefix from the original 'categories' entries.
-    4. Extracts the last character from each entry in the split columns (assumed to be an integer) 
-       and converts it to an integer type.
-    5. Drops rows with a value of '2' in any of the category columns, as they do not fit binary classification.
-    6. Drops the original 'categories' column.
-    7. Concatenates the new category columns back into the original DataFrame.
-    8. Removes duplicate rows.
-
-    Parameters:
-    df (pandas.DataFrame): The DataFrame containing the 'categories' column to process.
-
-    Returns:
-    pandas.DataFrame: The transformed DataFrame with new category columns, duplicates removed, and only binary values.
-    """
-    # Step 1: Split 'categories' into separate category columns
+    # Split 'categories' into separate columns
     categories = df['categories'].str.split(';', expand=True)
-    
-    # Step 2: Extract new column names for categories
+
+    # Use the text before '-' from the first row as column names
     first_row = categories.iloc[0]
     category_colnames = first_row.apply(lambda x: x.split('-')[0])
     categories.columns = category_colnames
 
-    # Step 3: Convert category values to integers and drop rows with value '2'
-    for column in categories:
-        # Convert values to integers after extracting the last character
-        categories[column] = categories[column].str[-1].astype(int)
-        # Drop rows where the value is '2' in this column
-        categories = categories[categories[column] != 2]
+    # Convert each category value to numeric {0,1}
+    for col in categories.columns:
+        # get the number after the hyphen
+        categories[col] = categories[col].str.split('-').str[-1]
+        # coerce to numeric
+        categories[col] = pd.to_numeric(categories[col], errors='coerce')
+        # map 2 -> 1 (common in 'related')
+        categories[col] = categories[col].replace(2, 1)
+        # clip to [0,1], fill NaN with 0, cast to int
+        categories[col] = categories[col].clip(0, 1).fillna(0).astype(int)
 
-    # Step 4: Drop the original 'categories' column from `df`
-    df = df.drop('categories', axis=1)
+    # OPTIONAL: drop columns that are entirely zeros (e.g., 'child_alone' in some datasets)
+    zero_cols = [c for c in categories.columns if categories[c].sum() == 0]
+    if zero_cols:
+        categories = categories.drop(columns=zero_cols)
 
-    # Step 5: Concatenate the original `df` with the new `categories` DataFrame
+    # Drop original 'categories' and concat cleaned targets
+    df = df.drop(columns=['categories'])
     df = pd.concat([df, categories], axis=1)
 
-    # Step 6: Remove duplicates
+    # Remove duplicates
     df = df.drop_duplicates()
 
     return df
+
 
 
 
